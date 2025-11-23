@@ -1,0 +1,78 @@
+.sun-control-container {
+    position: relative;
+    width: 300px;
+    height: 200px;
+    /* Increased height for slider */
+    margin: 0 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.sky-arc {
+    width: 240px;
+    height: 240px;
+    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    position: absolute;
+    top: 30px;
+    /* Adjusted position */
+    left: 30px;
+}
+
+.sun-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 30px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Removed bottom/left centering because JS sets exact transform */
+    cursor: grab;
+    user-select: none;
+    pointer-events: auto;
+    /* Ensure it captures clicks */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.sun-icon:active {
+    cursor: grabbing;
+}
+
+.time-display {
+    position: absolute;
+    bottom: 50px;
+    /* Moved up */
+    width: 100%;
+    text-align: center;
+    font-family: monospace;
+    font-size: 1.2rem;
+    color: #fff;
+    pointer-events: none;
+}
+
+.slider-container {
+    position: absolute;
+    bottom: 10px;
+    width: 80%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.sun-slider {
+    width: 100%;
+    accent-color: #f1c40f;
+    cursor: pointer;
+}
+
+.slider-label {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+}

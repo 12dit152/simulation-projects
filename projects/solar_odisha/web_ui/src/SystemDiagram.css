@@ -1,0 +1,204 @@
+.schematic-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    /* Allow scroll on small screens */
+    padding-bottom: 20px;
+}
+
+.schematic-container {
+    display: grid;
+    /* 5 Columns: Component, Wire, Component, Wire, Component */
+    grid-template-columns: 140px 80px 140px 80px 140px;
+    grid-template-rows: 140px 60px 140px 60px 140px;
+    gap: 10px;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    width: max-content;
+    /* Force full width, trigger scroll if needed */
+    margin: 0 auto;
+    justify-items: center;
+    align-items: center;
+}
+
+/* Component Box */
+.component-box {
+    background: #2c3e50;
+    border: 2px solid #34495e;
+    border-radius: 8px;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    z-index: 2;
+    position: relative;
+}
+
+.component-box .icon {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+}
+
+.component-box .title {
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #bdc3c7;
+    text-align: center;
+}
+
+.component-box .details {
+    font-size: 0.7rem;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Colors */
+.panel-box {
+    border-color: #f39c12;
+}
+
+.controller-box {
+    border-color: #e67e22;
+}
+
+.battery-box {
+    border-color: #27ae60;
+}
+
+.inverter-box {
+    border-color: #9b59b6;
+}
+
+.load-box {
+    border-color: #e74c3c;
+}
+
+.grid-box {
+    border-color: #7f8c8d;
+    opacity: 0.5;
+}
+
+.grid-box.active {
+    border-color: #00ccff;
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(0, 204, 255, 0.3);
+}
+
+/* Wires */
+.wire-segment {
+    background: #555;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wire-segment.horizontal {
+    height: 8px;
+    width: 100%;
+}
+
+.wire-segment.vertical {
+    width: 8px;
+    height: 100%;
+}
+
+/* Wire Info */
+.wire-info {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.wire-segment.horizontal .wire-info {
+    top: -65px;
+}
+
+.wire-segment.vertical .wire-info {
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.wire-type {
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-bottom: 2px;
+}
+
+.wire-type.dc {
+    background: #ff9800;
+    color: #000;
+}
+
+.wire-type.ac {
+    background: #00bcd4;
+    color: #000;
+}
+
+.wire-power {
+    font-size: 0.7rem;
+    color: #4caf50;
+    font-weight: bold;
+}
+
+.wire-current {
+    font-size: 0.65rem;
+    color: #ffc107;
+}
+
+.wire-loss {
+    font-size: 0.6rem;
+    color: #f44336;
+}
+
+/* Arrows */
+.wire-arrow {
+    position: absolute;
+    font-size: 1.5rem;
+    color: #ffeb3b;
+    font-weight: bold;
+    z-index: 5;
+    text-shadow: 0 0 5px #000;
+}
+
+.wire-segment.horizontal .wire-arrow {
+    right: 5px;
+    top: -12px;
+}
+
+.wire-segment.vertical .wire-arrow {
+    bottom: 5px;
+    left: -8px;
+}
+
+/* Battery Bar */
+.battery-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 5px 0;
+}
+
+.battery-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+}

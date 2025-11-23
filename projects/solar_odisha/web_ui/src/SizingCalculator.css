@@ -1,0 +1,106 @@
+.sizing-calculator {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+    min-width: 250px;
+    margin-top: 20px;
+}
+
+.sizing-calculator h3 {
+    margin-top: 0;
+    color: #f1c40f;
+}
+
+.appliance-list {
+    margin-bottom: 15px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.appliance-item {
+    display: flex;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 5px 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.appliance-item button {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.add-form {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+}
+
+.add-form input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.add-form button {
+    background: #2ecc71;
+    border: none;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.recommendation-box {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.rec-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.rec-result {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.rec-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.rec-label {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.rec-value {
+    font-weight: bold;
+    color: #f1c40f;
+    font-size: 1rem;
+}
+
+.rec-sub {
+    font-size: 0.6rem;
+    opacity: 0.5;
+}
