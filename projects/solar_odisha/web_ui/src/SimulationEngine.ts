@@ -51,6 +51,7 @@ export interface SystemState {
     gridExport: number;
     gridImport: number;
     wastedPower: number;
+    battToInvPower: number;
 }
 
 export const DEFAULT_CONFIG: SystemConfig = {
@@ -99,43 +100,23 @@ export function calculateSystemState(
     const solarStats = calcWire(solarInput, config.panelVoltage, config.wireLengthFt, config.wireGaugeMm2);
     const powerAtController = Math.max(0, solarInput - solarStats.powerLoss);
 
-    // 3. Battery Charging
+    // 3. Battery Charging Limits
     const maxChargeCurrent = config.batteryCapacityAh / config.batteryCRating;
     const maxChargePower = maxChargeCurrent * config.batteryVoltage;
 
-    let powerAvailableForCharging = powerAtController * config.controllerEfficiency;
-    let powerToBattery = 0;
-    let wastedPower = 0;
-
-    if (systemMode === 'ON_GRID') {
-        powerToBattery = 0;
-        wastedPower = 0;
-    } else {
-        if (powerAvailableForCharging > maxChargePower) {
-            powerToBattery = maxChargePower;
-            wastedPower = powerAvailableForCharging - maxChargePower;
-        } else {
-            powerToBattery = powerAvailableForCharging;
-            wastedPower = 0;
-        }
-    }
-
-    // Controller -> Battery Stats
-    // Current is based on power flowing INTO battery
-    const controllerToBattStats = calcWire(powerToBattery, config.batteryVoltage, 5, config.wireGaugeMm2); // Assume 5ft
-
-    // 4. Battery State
+    // 4. Battery State (Moved up for logic use)
     const maxWh = config.batteryCapacityAh * config.batteryVoltage;
     const batteryPercent = (currentBatteryLevel / maxWh) * 100;
     const isBatteryFull = batteryPercent >= 100;
 
-    // 5. Inverter & Load
+    // 5. Inverter & Load (Determine Demand FIRST)
     const inverterInput = acLoad / config.inverterEfficiency;
 
     let inverterDrawFromBattery = 0;
     let gridActive = false;
     let gridExport = 0;
     let gridImport = 0;
+    let gridChargingPower = 0;
 
     if (systemMode === 'OFF_GRID') {
         gridActive = false;
@@ -152,45 +133,163 @@ export function calculateSystemState(
         }
         inverterDrawFromBattery = 0;
     } else { // HYBRID
-        if (batteryPercent < 70) {
-            gridActive = true;
-        } else {
-            gridActive = false;
-        }
+        // Hybrid Logic Refined:
+        // 1. Prioritize Solar for Load.
+        // 2. If Solar > Load, excess to Battery.
+        // 3. If Solar < Load, use Battery (if > 30%).
+        // 4. Only use Grid if Battery < 30% AND Solar insufficient.
 
-        if (gridActive) {
-            inverterDrawFromBattery = 0;
-            gridImport = acLoad;
-        } else {
+        const GRID_THRESHOLD = 30; // Lowered from 70% to use battery more
+        const GRID_CHARGE_THRESHOLD = 20;
+        const isLowSolar = effectiveIntensity < 0.1;
+
+        // Check if Solar + Battery can meet load
+        // Solar available at DC bus (approx)
+        const solarAvailableForLoad = powerAtController * config.controllerEfficiency;
+        const batteryCanSupport = batteryPercent > GRID_THRESHOLD;
+
+        if (solarAvailableForLoad >= inverterInput) {
+            // Solar covers load
+            gridActive = true; // Grid is connected but idle
+            inverterDrawFromBattery = inverterInput; // Will be covered by Solar via DC bus
+        } else if (batteryCanSupport) {
+            // Solar + Battery covers load
+            gridActive = true; // Grid is connected but idle
             inverterDrawFromBattery = inverterInput;
+        } else {
+            // Need Grid
+            gridActive = true;
+            gridImport = acLoad;
+            inverterDrawFromBattery = 0;
+
+            // Emergency Charge from Grid
+            if (batteryPercent < GRID_CHARGE_THRESHOLD && isLowSolar) {
+                const chargeNeeded = maxChargePower;
+                gridChargingPower = chargeNeeded / config.inverterEfficiency;
+                gridImport += gridChargingPower;
+            }
+        }
+    }
+
+    // 6. Controller Output (Solar -> DC Bus)
+    // Controller can supply: Battery Charge + Inverter Load
+    // It is limited by: Solar Input AND (Max Charge + Inverter Demand)
+    let powerAvailableForCharging = powerAtController * config.controllerEfficiency;
+    let totalDemand = maxChargePower + inverterDrawFromBattery;
+
+    // If On-Grid, no battery charging
+    if (systemMode === 'ON_GRID') {
+        totalDemand = 0;
+    }
+
+    let powerToBattery = 0; // This is actually "Controller Output"
+    let wastedPower = 0;
+
+    if (systemMode === 'ON_GRID') {
+        powerToBattery = 0;
+    } else {
+        // Allow controller to output enough for Load + Max Charge
+        if (powerAvailableForCharging > totalDemand) {
+            if (systemMode === 'HYBRID') {
+                // EXPORT LOGIC:
+                // If Hybrid, excess power goes to Grid instead of being wasted.
+                const excessDC = powerAvailableForCharging - totalDemand;
+                powerToBattery = powerAvailableForCharging; // Output full solar
+                wastedPower = 0;
+
+                // Route excess to Inverter for Export
+                inverterDrawFromBattery += excessDC;
+                gridExport = excessDC * config.inverterEfficiency;
+                gridActive = true;
+            } else {
+                // Off-Grid: Waste the excess
+                powerToBattery = totalDemand;
+                wastedPower = powerAvailableForCharging - totalDemand;
+            }
+        } else {
+            powerToBattery = powerAvailableForCharging;
+            wastedPower = 0;
+        }
+    }
+
+    // Controller -> Battery Stats (Wire 1)
+    const controllerToBattStats = calcWire(powerToBattery, config.batteryVoltage, 5, config.wireGaugeMm2);
+
+    // 7. Net Battery Flow
+    let netBatteryFlow = 0;
+    let effectiveControllerOutput = powerToBattery;
+    let gridChargeDC = 0;
+
+    if (systemMode === 'ON_GRID') {
+        netBatteryFlow = 0;
+    } else {
+        // Refined Net Flow:
+        // Inflow = powerToBattery (Controller Output)
+        // Outflow = inverterDrawFromBattery (Load + Export)
+        // Grid Charge = gridChargingPower * eff (DC)
+
+        gridChargeDC = gridChargingPower * config.inverterEfficiency;
+
+        // If Battery is Full, Controller should reduce output to match Load + Export
+        // Note: If Hybrid Exporting, we already set powerToBattery to full.
+        // If Off-Grid, we capped it at totalDemand.
+
+        netBatteryFlow = (effectiveControllerOutput + gridChargeDC) - inverterDrawFromBattery;
+
+        // Safety Clamp: If net flow > maxChargePower, it means we are pushing too much into battery?
+        // In Hybrid Export, (Load + Charge + Export) - (Load + Export) = Charge.
+        // So it should be exactly maxChargePower.
+
+        // However, if Battery is FULL (100%), we shouldn't be charging.
+        if (isBatteryFull && netBatteryFlow > 0) {
+            // We are pushing current into a full battery.
+            // In reality, the controller voltage rises and current drops.
+            // We should reduce effectiveControllerOutput to stop charging.
+            const excessCharge = netBatteryFlow;
+            // If Hybrid, this excess charge could ALSO be exported!
+            if (systemMode === 'HYBRID') {
+                // Redirect this last bit of "Charge" to Export
+                inverterDrawFromBattery += excessCharge;
+                gridExport += (excessCharge * config.inverterEfficiency);
+                netBatteryFlow = 0;
+            } else {
+                // Off-Grid: Waste it
+                effectiveControllerOutput -= excessCharge;
+                wastedPower += excessCharge;
+                netBatteryFlow = 0;
+            }
+        }
+    }
+
+    // NET GRID FLOW CORRECTION
+    // It is physically impossible to Import and Export simultaneously on a single phase.
+    // We must net them out.
+    if (gridImport > 0 && gridExport > 0) {
+        if (gridImport >= gridExport) {
+            gridImport -= gridExport;
+            gridExport = 0;
+        } else {
+            gridExport -= gridImport;
             gridImport = 0;
         }
     }
 
     // Battery -> Inverter Stats
-    const battToInvStats = calcWire(inverterDrawFromBattery, config.batteryVoltage, 5, config.wireGaugeMm2); // Assume 5ft
+    const battToInvPower = gridChargingPower > 0 ? gridChargingPower : inverterDrawFromBattery;
+    const battToInvStats = calcWire(battToInvPower, config.batteryVoltage, 5, config.wireGaugeMm2);
 
-    // Inverter -> Load Stats (AC, 230V assumed)
-    const invToLoadStats = calcWire(acLoad, 230, 20, 2.5); // Assume 20ft, 2.5mm2 standard AC wire
+    // Inverter -> Load Stats
+    const invToLoadStats = calcWire(acLoad, 230, 20, 2.5);
 
-    // 6. Net Battery Flow
-    let netBatteryFlow = 0;
-    if (systemMode === 'ON_GRID') {
-        netBatteryFlow = 0;
-    } else {
-        const actualCharge = isBatteryFull ? 0 : powerToBattery;
-        netBatteryFlow = actualCharge - inverterDrawFromBattery;
-    }
-
-    // Legacy WireAnalysis (keeping for backward compatibility with existing UI parts if any)
+    // Legacy WireAnalysis
     const wireAnalysis: WireAnalysis = {
         current: solarStats.current,
-        resistance: 0, // Simplified
+        resistance: 0,
         powerLoss: solarStats.powerLoss,
         voltageDrop: solarStats.voltageDrop,
         voltageDropPercent: (solarStats.voltageDrop / config.panelVoltage) * 100,
         isSafe: solarStats.isSafe,
-        recommendedMm2: 0, // Simplified
+        recommendedMm2: 0,
         message: solarStats.isSafe ? "OK" : "WARNING: Wire overheating!"
     };
 
@@ -206,7 +305,7 @@ export function calculateSystemState(
             inverterToLoad: invToLoadStats
         },
         powerAtController,
-        powerToBattery,
+        powerToBattery: effectiveControllerOutput, // Use effective output (after full-battery reduction)
         batteryLevel: currentBatteryLevel,
         batteryPercent,
         acLoad,
@@ -215,6 +314,7 @@ export function calculateSystemState(
         gridActive,
         gridExport,
         gridImport,
-        wastedPower
+        wastedPower,
+        battToInvPower
     };
 }

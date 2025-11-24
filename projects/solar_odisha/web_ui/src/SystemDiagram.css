@@ -8,8 +8,10 @@
 .schematic-container {
     display: grid;
     /* 5 Columns: Component, Wire, Component, Wire, Component */
-    grid-template-columns: 140px 80px 140px 80px 140px;
-    grid-template-rows: 140px 60px 140px 60px 140px;
+    /* Increased wire column width from 80px to 120px to fit labels */
+    grid-template-columns: 140px 120px 140px 120px 140px;
+    /* Increased wire row height from 60px to 90px. Total 7 rows for vertical stack. */
+    grid-template-rows: 140px 90px 140px 90px 140px 90px 140px;
     gap: 10px;
     padding: 40px;
     background: rgba(255, 255, 255, 0.05);
@@ -19,6 +21,12 @@
     margin: 0 auto;
     justify-items: center;
     align-items: center;
+}
+
+/* Compact layout for On-Grid (No Battery/Controller rows) */
+.schematic-container.on-grid {
+    /* 5 Rows: Solar, Wire, Inverter, Wire, Grid */
+    grid-template-rows: 140px 90px 140px 90px 140px;
 }
 
 /* Component Box */
@@ -122,14 +130,19 @@
     z-index: 10;
     white-space: nowrap;
     pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .wire-segment.horizontal .wire-info {
-    top: -65px;
+    top: -70px;
+    /* Moved up slightly */
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .wire-segment.vertical .wire-info {
-    left: 20px;
+    left: 25px;
+    /* Moved further right */
     top: 50%;
     transform: translateY(-50%);
 }
@@ -179,26 +192,19 @@
 }
 
 .wire-segment.horizontal .wire-arrow {
-    right: 5px;
-    top: -12px;
+    /* Moved arrow below the wire to avoid text overlap */
+    top: auto;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
 }
 
 .wire-segment.vertical .wire-arrow {
-    bottom: 5px;
+    /* Centered arrow on the vertical line */
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
     left: -8px;
-}
-
-/* Battery Bar */
-.battery-bar {
-    width: 100%;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    overflow: hidden;
-    margin: 5px 0;
-}
-
-.battery-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #27ae60, #2ecc71);
+    /* Centered horizontally on the 8px wide wire */
 }

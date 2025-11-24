@@ -20,6 +20,8 @@
   flex-direction: column;
   gap: 20px;
   overflow-y: auto;
+  /* Hide scrollbar for cleaner look but allow scroll */
+  scrollbar-width: thin;
 }
 
 .right-panel {
@@ -32,9 +34,41 @@
   border-radius: 20px;
   padding: 20px;
   position: relative;
+  overflow-y: auto;
+  /* Allow scroll if diagram is too big */
 }
 
 /* Reuse existing styles but scoped if needed */
 .controls-section {
   margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .app-container {
+    height: auto;
+    /* Allow full page scroll */
+    overflow-y: auto;
+  }
+
+  .main-layout {
+    flex-direction: column;
+    padding: 10px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .left-panel {
+    flex: none;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .right-panel {
+    flex: none;
+    width: 100%;
+    height: auto;
+    min-height: 500px;
+    /* Ensure space for diagram */
+  }
 }
